@@ -19,14 +19,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  pwa: {
+    dest: 'public',
+    disable: process.env.NODE_ENV === 'development',
+  },
 };
 
-const pwaConfig = {
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-};
-
-export default withPWA({
-  ...nextConfig,
-  pwa: pwaConfig,
-});
+export default withPWA(nextConfig);
