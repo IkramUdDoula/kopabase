@@ -47,13 +47,12 @@ npm run dev
 - `src/components/metrics/` - Metric cards (database size, etc.)
 - `src/app/api/metrics/` - Secure API routes for metrics (server-side only)
 - `src/lib/` - Supabase client and utilities
-- `docs/dashboard.md` - Documentation for all dashboard metrics and their sources
 
 ## Security
 - The `service_role` key is **never sent to the client**. All sensitive API calls are made via server-side API routes.
 
 ## Customization
-- To add a new metric, create an API route in `src/app/api/metrics/` and a card in `src/components/metrics/`. Update `docs/dashboard.md`.
+- To add a new metric, create an API route in `src/app/api/metrics/` and a card in `src/components/metrics/`. 
 
 ## License
 MIT
