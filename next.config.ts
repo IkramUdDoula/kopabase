@@ -1,16 +1,15 @@
-import withPWA from 'next-pwa';
-import type { NextConfig } from 'next';
+const withPWA = require('next-pwa');
 
-const pwaConfig = {
+const pwaOptions = {
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
 };
 
-const withPwaConfig = withPWA({
-  pwa: pwaConfig,
+const nextConfig = withPWA({
+  pwa: pwaOptions,
 });
 
-withPwaConfig.images = {
+nextConfig.images = {
   remotePatterns: [
     {
       protocol: 'https',
@@ -20,11 +19,11 @@ withPwaConfig.images = {
     },
   ],
 };
-withPwaConfig.typescript = {
+nextConfig.typescript = {
   ignoreBuildErrors: true,
 };
-withPwaConfig.eslint = {
+nextConfig.eslint = {
   ignoreDuringBuilds: true,
 };
 
-export default withPwaConfig;
+module.exports = nextConfig;
