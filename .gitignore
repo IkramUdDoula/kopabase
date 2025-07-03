@@ -49,3 +49,6 @@ firestore-debug.log
 config.json
 
 
+
+# Local Netlify folder
+.netlify
