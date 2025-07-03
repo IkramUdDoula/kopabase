@@ -2,13 +2,6 @@ import withPWA from 'next-pwa';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -25,4 +18,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+const config = withPWA(nextConfig);
+
+config.typescript = {
+  ignoreBuildErrors: true,
+};
+config.eslint = {
+  ignoreDuringBuilds: true,
+};
+
+export default config;
