@@ -108,6 +108,47 @@ A bare minimum Supabase client for everyday admin work.
 
 See `package.json` for the full list and versions.
 
+## 🔑 Configuration: Supabase Credentials
+
+Kopabase requires your Supabase project URL and anon key to connect to your database and storage.
+
+You can provide these credentials in one of two ways:
+
+### 1. Environment Variables (Recommended)
+
+Create a `.env.local` file in the project root with the following:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+- You can find these values in your [Supabase project settings](https://app.supabase.com/project/_/settings/api).
+- Restart the dev server after editing your `.env.local` file.
+
+### 2. JSON Config (Advanced/Programmatic)
+
+If you want to provide config programmatically (e.g., for deployment or custom environments), use this JSON structure:
+
+```json
+{
+{
+    "projectUrl": "your-supabase-project-url",
+    "anonKey": "your-supabase-project-anon-key",
+    "serviceRoleKey": "your-supabse-project-service-role-key",
+    "projectName": "haalkhata admin"
+  }
+}
+```
+
+You can inject these values at runtime or extend the app to load them from a config file. By default, Kopabase uses environment variables as shown above.
+
+**Required fields:**
+- `supabaseUrl`: Your Supabase project URL (starts with `https://`)
+- `supabaseAnonKey`: Your Supabase anon/public API key
+
+See `src/config/settings.ts` for how these are loaded and used.
+
 ---
 
 **Enjoy managing your Supabase project with Kopabase!**
