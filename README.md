@@ -6,7 +6,6 @@ A modern admin dashboard for Supabase, built with Next.js, React, and Tailwind C
 - **Connect to any Supabase project** via form or JSON import
 - **Securely view database tables** and records
 - **Add, edit, and delete records**
-- **Metrics dashboard**: Database size (live), plus placeholders for connections, API usage, storage, and more
 - **All sensitive operations are performed server-side** (service_role key never exposed to frontend)
 - **Beautiful, responsive UI** with custom component library
 
