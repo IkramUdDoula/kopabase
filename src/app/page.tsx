@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/dashboard-layout";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { useLoading } from "@/hooks/use-loading";
 
 export default function Home() {
   const [client, setClient] = useState<SupabaseClient | null>(null);
@@ -15,7 +16,7 @@ export default function Home() {
   const [projectName, setProjectName] = useState<string | null>(null);
   const [anonKey, setAnonKey] = useState<string>("");
   const [serviceRoleKey, setServiceRoleKey] = useState<string | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, startLoading, stopLoading] = useLoading(false);
   const { toast } = useToast();
 
   // Restore connection info from localStorage on mount
@@ -36,7 +37,7 @@ export default function Home() {
   }, []);
 
   const handleConnect = async (url: string, key: string, serviceRoleKey?: string, projectName?: string) => {
-    setIsLoading(true);
+    startLoading();
     try {
       if (!url || !key) {
         throw new Error("Project URL and Anon Key are required.");
@@ -75,7 +76,7 @@ export default function Home() {
       // Remove invalid connection info
       localStorage.removeItem("supabaseConnection");
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
   

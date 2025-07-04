@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import type { SupabaseClient } from "@/lib/supabase-client";
 import { ScrollArea } from "./ui/scroll-area";
+import { generateZodSchema } from "@/lib/utils";
 
 type AddRecordDialogProps = {
   isOpen: boolean;
@@ -27,48 +28,6 @@ type AddRecordDialogProps = {
   tableName: string;
   schema: any;
   onSuccess: () => void;
-};
-
-// Function to generate Zod schema from Supabase schema
-const generateZodSchema = (properties: any) => {
-  const shape: { [key: string]: z.ZodType<any, any> } = {};
-  for (const key in properties) {
-    const prop = properties[key];
-    // We can't add records for columns with a default value, as they are often auto-generated (e.g. id, created_at)
-    if (prop.default !== undefined) continue;
-
-    switch (prop.type) {
-      case "boolean":
-        shape[key] = z.boolean().default(false);
-        break;
-      case "integer":
-      case "number":
-        shape[key] = z.coerce.number().optional();
-        break;
-      case "string":
-        if (prop.format === 'date-time') {
-            shape[key] = z.string().optional(); // Let DB handle conversion
-        } else {
-            shape[key] = z.string().optional();
-        }
-        break;
-      case "object":
-        shape[key] = z.string().refine((val) => {
-            if (!val) return true;
-            try {
-                JSON.parse(val);
-                return true;
-            } catch {
-                return false;
-            }
-        }, { message: "Invalid JSON format" }).optional();
-        break;
-      default:
-        shape[key] = z.any().optional();
-        break;
-    }
-  }
-  return z.object(shape);
 };
 
 export default function AddRecordDialog({ isOpen, onOpenChange, client, tableName, schema, onSuccess }: AddRecordDialogProps) {

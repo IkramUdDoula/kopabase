@@ -2,25 +2,28 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { SupabaseClient } from "@/lib/supabase-client";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger, SidebarInset, SidebarFooter } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger, SidebarInset, SidebarFooter, SidebarSeparator } from "@/components/ui/sidebar";
 import TableList from "./table-list";
 import TableViewer from "./table-viewer";
 import { Button } from "./ui/button"; 
-import { Database, Plus, RefreshCw } from "lucide-react";
+import { Database, Plus, RefreshCw, Table, Archive, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AddRecordDialog from "./add-record-dialog";
 import EditRecordDialog from "./edit-record-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ChartContainer } from "./ui/chart";
-import { DbSizeCard } from "./metrics/DbSizeCard";
-import { OpenAITokensCard } from "./metrics/OpenAITokensCard";
-import StorageList, { Bucket } from "./storage-list";
-import StorageBucketViewer from "./storage-bucket-viewer";
+import { DbSizeCard } from "@/features/metrics/DbSizeCard";
+import { OpenAITokensCard } from "@/features/metrics/OpenAITokensCard";
+import { MetricCard } from "@/features/metrics/MetricCard";
+import StorageBucketViewer from "@/features/storage/StorageBucketViewer";
+import StorageList from "@/features/storage/StorageList";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { SidebarSeparator } from "./ui/sidebar";
 import { ChevronDown, ChevronRight, Settings as SettingsIcon } from "lucide-react";
 import { Input } from "./ui/input";
+import { useLoading } from "@/hooks/use-loading";
+import { useDialog } from "@/hooks/use-dialog";
+import type { Bucket } from "@/features/storage/StorageList";
 
 type DashboardLayoutProps = {
   client: SupabaseClient;
@@ -33,17 +36,32 @@ type DashboardLayoutProps = {
 };
 
 export default function DashboardLayout({ client, schema, onDisconnect, projectUrl, projectName: projectNameProp, anonKey, serviceRoleKey }: DashboardLayoutProps) {
+  // tableNames must be defined first
+  const tableNames = useMemo(() => {
+    if (!schema.paths) return [];
+    const internalTables = new Set([
+        'users', 'identities', 'sessions', 'refresh_tokens', 'mfa_factors', 
+        'mfa_challenges', 'saml_providers', 'saml_relay_states', 'sso_providers', 
+        'sso_domains', 'key', 'audit_log_entries',
+        'buckets', 'objects',
+        'migrations'
+    ]);
+    return Object.keys(schema.paths)
+        .map(p => p.substring(1))
+        .filter(name => !internalTables.has(name));
+  }, [schema]);
+
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedBucket, setSelectedBucket] = useState<Bucket | null>(null);
 
   // State lifted from TableViewer
   const [data, setData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, startLoading, stopLoading] = useLoading(true);
   const [selectedRows, setSelectedRows] = useState<Set<any>>(new Set());
-  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, openAddDialog, closeAddDialog, setAddDialogOpen] = useDialog(false);
+  const [isEditDialogOpen, openEditDialog, closeEditDialog, setEditDialogOpen] = useDialog(false);
   const [editingRecord, setEditingRecord] = useState<any | null>(null);
-  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, openDeleteDialog, closeDeleteDialog, setDeleteDialogOpen] = useDialog(false);
   const [sortConfig, setSortConfig] = useState<{ column: string; ascending: boolean } | null>(null);
 
   const { toast } = useToast();
@@ -68,25 +86,84 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
 
   const [bucketReloadKey, setBucketReloadKey] = useState(0);
 
-  const tableNames = useMemo(() => {
-    if (!schema.paths) return [];
-    
-    // Internal Supabase tables that are not meant for direct editing through this tool.
-    const internalTables = new Set([
-        // auth schema
-        'users', 'identities', 'sessions', 'refresh_tokens', 'mfa_factors', 
-        'mfa_challenges', 'saml_providers', 'saml_relay_states', 'sso_providers', 
-        'sso_domains', 'key', 'audit_log_entries',
-        // storage schema
-        'buckets', 'objects',
-        // other internal
-        'migrations'
-    ]);
-    
-    return Object.keys(schema.paths)
-        .map(p => p.substring(1))
-        .filter(name => !internalTables.has(name));
-  }, [schema]);
+  // Pin state for tables and buckets
+  const [tablePins, setTablePins] = useState<string[]>([]);
+  const [bucketPins, setBucketPins] = useState<string[]>([]);
+  const [buckets, setBuckets] = useState<Bucket[]>([]);
+
+  // Load pins from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("supabaseConnection");
+    let configKey = null;
+    if (saved) {
+      try {
+        const { projectUrl, anonKey } = JSON.parse(saved);
+        if (projectUrl && anonKey) {
+          configKey = `${projectUrl}:${anonKey}`;
+        }
+      } catch {}
+    }
+    if (configKey) {
+      const tablePins = localStorage.getItem(`pinnedTables:${configKey}`);
+      setTablePins(tablePins ? JSON.parse(tablePins) : []);
+      const bucketPins = localStorage.getItem(`pinnedBuckets:${configKey}`);
+      setBucketPins(bucketPins ? JSON.parse(bucketPins) : []);
+    }
+  }, [projectUrl, anonKey]);
+
+  // Pin/unpin handlers
+  const handlePinTable = (table: string) => {
+    let newPins;
+    if (tablePins.includes(table)) {
+      newPins = tablePins.filter(t => t !== table);
+    } else {
+      newPins = [...tablePins, table];
+    }
+    setTablePins(newPins);
+    const saved = localStorage.getItem("supabaseConnection");
+    if (saved) {
+      try {
+        const { projectUrl, anonKey } = JSON.parse(saved);
+        if (projectUrl && anonKey) {
+          localStorage.setItem(`pinnedTables:${projectUrl}:${anonKey}`, JSON.stringify(newPins));
+        }
+      } catch {}
+    }
+  };
+  const handlePinBucket = (bucketName: string) => {
+    let newPins;
+    if (bucketPins.includes(bucketName)) {
+      newPins = bucketPins.filter(b => b !== bucketName);
+    } else {
+      newPins = [...bucketPins, bucketName];
+    }
+    setBucketPins(newPins);
+    const saved = localStorage.getItem("supabaseConnection");
+    if (saved) {
+      try {
+        const { projectUrl, anonKey } = JSON.parse(saved);
+        if (projectUrl && anonKey) {
+          localStorage.setItem(`pinnedBuckets:${projectUrl}:${anonKey}`, JSON.stringify(newPins));
+        }
+      } catch {}
+    }
+  };
+
+  // Fetch buckets for sidebar
+  useEffect(() => {
+    const supabase = require('@supabase/supabase-js').createClient(projectUrl, anonKey);
+    supabase.storage.listBuckets()
+      .then(({ data, error }: { data: Bucket[]; error: any }) => {
+        if (!error) setBuckets(data || []);
+      });
+  }, [projectUrl, anonKey]);
+
+  // Filter pinned/unpinned
+  const visibleTables = tableNames.slice(1);
+  const pinnedTables = visibleTables.filter(t => tablePins.includes(t));
+  const unpinnedTables = visibleTables.filter(t => !tablePins.includes(t));
+  const pinnedBuckets = buckets.filter(b => bucketPins.includes(b.name));
+  const unpinnedBuckets = buckets.filter(b => !bucketPins.includes(b.name));
 
   const projectName = useMemo(() => {
     if (!projectUrl) return "Project";
@@ -103,15 +180,6 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
     }
   }, [projectUrl]);
 
-  useEffect(() => {
-    // Always skip the first table (index 0) for selection and default to the second table (index 1)
-    if ((!selectedTable || !tableNames.includes(selectedTable)) && tableNames.length > 1) {
-      setSelectedTable(tableNames[1]);
-    } else if (selectedTable && !tableNames.includes(selectedTable)) {
-      setSelectedTable(tableNames[1] || null);
-    }
-  }, [tableNames, selectedTable]);
-  
   const tableSchema = selectedTable ? schema.definitions[selectedTable] : null;
   const columns = useMemo(() => tableSchema?.properties ? Object.keys(tableSchema.properties) : [], [tableSchema]);
   const primaryKey = useMemo(() => columns.find(c => c === 'id') || columns[0], [columns]);
@@ -125,10 +193,10 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
   const fetchData = useCallback(async () => {
     if (!selectedTable) {
         setData([]);
-        setIsLoading(false);
+        stopLoading();
         return;
     };
-    setIsLoading(true);
+    startLoading();
     const { data: fetchedData, error } = await client.from(selectedTable).select({
       order: sortConfig || undefined,
     });
@@ -139,9 +207,9 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
     } else {
       setData(fetchedData || []);
     }
-    setIsLoading(false);
+    stopLoading();
     setSelectedRows(new Set());
-  }, [client, selectedTable, sortConfig, toast]);
+  }, [client, selectedTable, sortConfig, toast, startLoading, stopLoading]);
 
   useEffect(() => {
     fetchData();
@@ -156,12 +224,12 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
       toast({ title: "Success", description: `${selectedRows.size} record(s) deleted.` });
       fetchData();
     }
-    setDeleteDialogOpen(false);
+    closeDeleteDialog();
   };
   
   const handleEditClick = (record: any) => {
     setEditingRecord(record);
-    setEditDialogOpen(true);
+    openEditDialog();
   };
 
   const handleSelectRow = (row: any, isSelected: boolean) => {
@@ -202,6 +270,64 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
           </div>
         </SidebarHeader>
         <SidebarContent className="p-0 flex flex-col h-full">
+          {/* Divider above pinned section */}
+          <SidebarSeparator className="my-2" />
+          {/* Pinned Section */}
+          {(pinnedTables.length > 0 || pinnedBuckets.length > 0) && (
+            <>
+              <div className="px-4 pt-2 pb-1 text-xs font-semibold text-muted-foreground">Pinned</div>
+              <div className="px-2 pb-2">
+                <ul className="flex flex-col gap-1">
+                  {pinnedTables.map(table => (
+                    <li key={table}>
+                      <button
+                        className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${selectedTable === table ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground' : ''}`}
+                        onClick={() => {
+                          setSelectedTable(table);
+                          setSelectedBucket(null);
+                          setShowSettings(false);
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Table className="w-4 h-4" />
+                          <span>{table}</span>
+                        </span>
+                        <Star
+                          className="w-4 h-4 text-yellow-500 cursor-pointer ml-2"
+                          onClick={e => { e.stopPropagation(); handlePinTable(table); }}
+                          fill="currentColor"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                  {pinnedBuckets.map(bucket => (
+                    <li key={bucket.id}>
+                      <button
+                        className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${selectedBucket?.id === bucket.id ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground' : ''}`}
+                        onClick={() => {
+                          setSelectedBucket(bucket);
+                          setSelectedTable(null);
+                          setShowSettings(false);
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Archive className="w-4 h-4" />
+                          <span>{bucket.name}</span>
+                          {bucket.public ? <span className="ml-2 text-xs text-muted-foreground">(public)</span> : null}
+                        </span>
+                        <Star
+                          className="w-4 h-4 text-yellow-500 cursor-pointer ml-2"
+                          onClick={e => { e.stopPropagation(); handlePinBucket(bucket.name); }}
+                          fill="currentColor"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <SidebarSeparator className="my-2" />
+            </>
+          )}
           {/* Database Section */}
           <Collapsible open={dbOpen} onOpenChange={setDbOpen}>
             <div className="flex items-center justify-between px-4 pt-2 pb-1 cursor-pointer select-none" onClick={() => setDbOpen(v => !v)}>
@@ -210,13 +336,15 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
             </div>
             <CollapsibleContent>
               <TableList
-                tables={tableNames}
+                tables={unpinnedTables}
                 selectedTable={selectedTable}
                 onSelectTable={(table) => {
                   setSelectedTable(table);
                   setSelectedBucket(null);
                   setShowSettings(false);
                 }}
+                pinned={tablePins}
+                onPin={handlePinTable}
               />
             </CollapsibleContent>
           </Collapsible>
@@ -229,16 +357,17 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
             </div>
             <CollapsibleContent>
               <StorageList 
-                client={client} 
                 projectUrl={projectUrl}
                 anonKey={anonKey}
-                serviceRoleKey={serviceRoleKey}
-                selectedBucketId={selectedBucket?.id || null}
+                selectedBucketId={selectedBucket ? selectedBucket.id : undefined}
                 onSelectBucket={(bucket) => {
                   setSelectedBucket(bucket);
                   setSelectedTable(null);
                   setShowSettings(false);
                 }}
+                buckets={unpinnedBuckets}
+                pinned={bucketPins}
+                onPin={handlePinBucket}
               />
             </CollapsibleContent>
           </Collapsible>
@@ -339,7 +468,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                 </div>
                 {selectedTable && !selectedBucket && (
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => setAddDialogOpen(true)}>
+                    <Button onClick={() => openAddDialog()}>
                       <Plus className="mr-2 h-4 w-4" /> Add Record
                     </Button>
                   </div>
@@ -359,10 +488,9 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                   onSelectAll={handleSelectAll}
                   onEditClick={handleEditClick}
                   selectedRowCount={selectedRows.size}
-                  onDeleteClick={() => setDeleteDialogOpen(true)}
+                  onDeleteClick={() => openDeleteDialog()}
                 />
-              ) : null}
-              {selectedBucket && (
+              ) : selectedBucket ? (
                 <StorageBucketViewer
                   key={selectedBucket.id + '-' + bucketReloadKey}
                   bucket={selectedBucket}
@@ -371,6 +499,13 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                   serviceRoleKey={serviceRoleKey}
                   maxVisibilitySeconds={maxVisibility}
                 />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <h2 className="text-3xl font-bold mb-2">Welcome to Kopabase!</h2>
+                    <p className="text-muted-foreground text-lg">Select a table or storage bucket from the sidebar to get started.</p>
+                  </div>
+                </div>
               )}
             </>
           )}
@@ -387,12 +522,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
             />
             <EditRecordDialog
               isOpen={isEditDialogOpen}
-              onOpenChange={(isOpen) => {
-                setEditDialogOpen(isOpen);
-                if (!isOpen) {
-                  setEditingRecord(null);
-                }
-              }}
+              onOpenChange={closeEditDialog}
               client={client}
               tableName={selectedTable}
               schema={tableSchema}
@@ -400,7 +530,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
               primaryKey={primaryKey}
               onSuccess={fetchData}
             />
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={closeDeleteDialog}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

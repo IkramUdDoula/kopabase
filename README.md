@@ -23,7 +23,10 @@ A bare minimum Supabase client for everyday admin work.
 
 - **Modern, Consistent UI/UX**
   - Responsive sidebar with collapsible Database and Storage sections
-  - Sectioned layout: logo/header, database, storage, settings, disconnect
+  - **Unified Pinned Section:** Pin your most-used tables and storage buckets for quick access. Pinned items appear together at the top of the sidebar, above all other sections.
+  - Pin/unpin any table or bucket using the star icon next to each item. Pinned items are removed from their original section and shown only in the pinned section.
+  - No table or bucket is selected by default. When you first connect or if nothing is selected, a friendly welcome message is shown in the main content area.
+  - Sectioned layout: logo/header, pinned, database, storage, settings, disconnect
   - Table and storage file views use a unified card-based design
   - Inline search, sorting, and selection for all tables
   - Reload button for refreshing table or bucket data
@@ -35,7 +38,8 @@ A bare minimum Supabase client for everyday admin work.
 
 - **Extensible & Minimal**
   - Built with Next.js, React, and Supabase JS client
-  - Modular component structure for easy extension
+  - Modular, feature-based structure for easy extension
+  - Centralized config and constants
   - Minimal dependencies and easy to maintain
 
 ## 🛠️ Getting Started
@@ -46,7 +50,7 @@ A bare minimum Supabase client for everyday admin work.
    # or
    yarn install
    ```
-2. Configure your Supabase project URL and keys in the app.
+2. Configure your Supabase project URL and keys in the app or via environment variables (see `src/config/settings.ts`).
 3. Start the development server:
    ```bash
    npm run dev
@@ -56,16 +60,53 @@ A bare minimum Supabase client for everyday admin work.
 
 ## 📁 Project Structure
 
-- `src/components/` — UI components (tables, storage, dialogs, sidebar, etc.)
 - `src/app/` — App entry and layout
+- `src/components/ui/` — Generic, reusable UI components
+- `src/features/` — Modular feature areas (e.g., metrics, storage)
+- `src/hooks/` — Custom React hooks
 - `src/lib/` — Supabase client and utilities
+- `src/config/` — Centralized constants and settings
 - `public/` — Static assets and icons
+
+## 🧩 Adding New Features
+
+- Create a new folder in `src/features/` for your feature (e.g., `src/features/your-feature/`).
+- Place all feature-specific components, hooks, and logic in that folder.
+- Import shared UI components from `src/components/ui/` and utilities from `src/lib/` as needed.
+- Add any new constants or settings to `src/config/constants.ts` or `src/config/settings.ts`.
+
+## 🏗️ Contribution Guidelines
+
+- Keep code modular and reusable.
+- Centralize all constants and settings in `src/config/`.
+- Add JSDoc/comments to complex utilities and components.
+- Follow the existing file/folder naming conventions.
+- See `CONTRIBUTING.md` for more details (coming soon).
 
 ## 💡 Why Kopabase?
 
 - No vendor lock-in: works with any Supabase project
 - Fast, clean, and focused on real admin workflows
 - Open source and easy to extend
+
+## 📦 Major Dependencies
+
+- **next**: React framework for server-side rendering and static site generation
+- **react, react-dom**: Core React libraries
+- **@supabase/supabase-js**: Supabase client for database and storage
+- **@radix-ui/react-***: Accessible, composable UI primitives
+- **react-hook-form, @hookform/resolvers**: Form state management and validation
+- **zod**: TypeScript-first schema validation
+- **lucide-react**: Icon library
+- **date-fns**: Date utility functions
+- **embla-carousel-react**: Carousel/slider component
+- **recharts**: Charting library
+- **tailwindcss, tailwind-merge, tailwindcss-animate**: Utility-first CSS framework and helpers
+- **clsx, class-variance-authority**: Conditional className utilities
+- **dotenv**: Environment variable management
+- **firebase, genkit, @genkit-ai/googleai, @genkit-ai/next**: AI and cloud integrations (optional/advanced)
+
+See `package.json` for the full list and versions.
 
 ---
 

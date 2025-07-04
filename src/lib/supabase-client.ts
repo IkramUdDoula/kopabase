@@ -1,5 +1,11 @@
+/**
+ * Type definition for a minimal Supabase client abstraction.
+ * Provides methods for schema fetching and CRUD operations on tables.
+ */
 export type SupabaseClient = {
+  /** Fetches the database schema. */
   getSchema: () => Promise<any>;
+  /** Returns CRUD methods for a given table. */
   from: (table: string) => {
     select: (options?: { query?: string, order?: { column: string, ascending: boolean } }) => Promise<{ data: any[] | null; error: any | null }>;
     insert: (records: any | any[]) => Promise<{ data: any[] | null; error: any | null }>;
@@ -10,11 +16,21 @@ export type SupabaseClient = {
   };
 };
 
+/**
+ * Creates a minimal Supabase client for REST API access.
+ * Handles schema fetching and CRUD operations with proper headers and error handling.
+ *
+ * @param projectUrl - The Supabase project REST URL
+ * @param anonKey - The Supabase anon/public key
+ * @param serviceRoleKey - (Optional) Service role key for elevated permissions
+ * @returns SupabaseClient instance
+ */
 export const createSupabaseClient = (projectUrl: string, anonKey: string, serviceRoleKey?: string): SupabaseClient => {
   // Ensure the URL does not end with a slash
   const sanitizedUrl = projectUrl.endsWith('/') ? projectUrl.slice(0, -1) : projectUrl;
   const restUrl = `${sanitizedUrl}/rest/v1`;
 
+  // Use service role key if provided, otherwise anon key
   const supabaseKey = serviceRoleKey || anonKey;
   const headers = {
     'apikey': anonKey,
@@ -22,6 +38,9 @@ export const createSupabaseClient = (projectUrl: string, anonKey: string, servic
     'Content-Type': 'application/json',
   };
 
+  /**
+   * Fetches the database schema from Supabase REST API.
+   */
   const getSchema = async () => {
     try {
       const response = await fetch(`${restUrl}/`, { headers });
@@ -36,7 +55,15 @@ export const createSupabaseClient = (projectUrl: string, anonKey: string, servic
     }
   };
 
+  /**
+   * Returns CRUD methods for a given table.
+   */
   const from = (table: string) => ({
+    /**
+     * Selects rows from the table.
+     * @param options.query - Fields to select (default: '*')
+     * @param options.order - Optional order by column and direction
+     */
     select: async (options?: { query?: string, order?: { column: string, ascending: boolean } }) => {
         try {
             const { query = '*', order } = options || {};
@@ -52,6 +79,10 @@ export const createSupabaseClient = (projectUrl: string, anonKey: string, servic
             return { data: null, error };
         }
     },
+    /**
+     * Inserts one or more records into the table.
+     * @param records - Single record or array of records
+     */
     insert: async (records: any | any[]) => {
         try {
             const response = await fetch(`${restUrl}/${table}`, {
@@ -72,6 +103,12 @@ export const createSupabaseClient = (projectUrl: string, anonKey: string, servic
             return { data: null, error };
         }
     },
+    /**
+     * Updates a record in the table by primary key.
+     * @param record - The updated record data
+     * @param pkColumn - The primary key column name
+     * @param pkValue - The primary key value
+     */
     update: async (record: any, pkColumn: string, pkValue: any) => {
         try {
             const response = await fetch(`${restUrl}/${table}?${pkColumn}=eq.${encodeURIComponent(pkValue)}`, {
@@ -92,7 +129,15 @@ export const createSupabaseClient = (projectUrl: string, anonKey: string, servic
             return { data: null, error };
         }
     },
+    /**
+     * Returns a delete method for the table.
+     */
     delete: () => ({
+        /**
+         * Deletes rows where the column matches any of the provided values.
+         * @param column - The column to match
+         * @param values - Array of values to delete
+         */
         in: async (column: string, values: any[]) => {
             if (values.length === 0) return { data: [], error: null };
             try {

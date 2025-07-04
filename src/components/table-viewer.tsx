@@ -15,6 +15,7 @@ import { ArrowUpDown, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
+import { useSearch } from "@/hooks/use-search";
 
 type TableViewerProps = {
   data: any[];
@@ -45,7 +46,7 @@ export default function TableViewer({
   selectedRowCount,
   onDeleteClick,
 }: TableViewerProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm, resetSearch] = useSearch('');
   const handleSort = (column: string) => {
     if (sortConfig && sortConfig.column === column) {
       onSort({ column, ascending: !sortConfig.ascending });

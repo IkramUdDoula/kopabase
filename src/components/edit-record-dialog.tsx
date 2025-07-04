@@ -20,6 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import type { SupabaseClient } from "@/lib/supabase-client";
 import { ScrollArea } from "./ui/scroll-area";
+import { generateZodSchema } from "@/lib/utils";
 
 type EditRecordDialogProps = {
   isOpen: boolean;
@@ -31,46 +32,6 @@ type EditRecordDialogProps = {
   primaryKey: string;
   onSuccess: () => void;
 };
-
-// Function to generate Zod schema from Supabase schema
-const generateZodSchema = (properties: any) => {
-  const shape: { [key: string]: z.ZodType<any, any> } = {};
-  for (const key in properties) {
-    const prop = properties[key];
-    switch (prop.type) {
-      case "boolean":
-        shape[key] = z.boolean().default(false);
-        break;
-      case "integer":
-      case "number":
-        shape[key] = z.coerce.number().optional().nullable();
-        break;
-      case "string":
-        if (prop.format === 'date-time') {
-            shape[key] = z.string().optional().nullable();
-        } else {
-            shape[key] = z.string().optional().nullable();
-        }
-        break;
-      case "object":
-        shape[key] = z.string().refine((val) => {
-            if (!val || val === '') return true;
-            try {
-                JSON.parse(val);
-                return true;
-            } catch {
-                return false;
-            }
-        }, { message: "Invalid JSON format" }).optional().nullable();
-        break;
-      default:
-        shape[key] = z.any().optional().nullable();
-        break;
-    }
-  }
-  return z.object(shape);
-};
-
 
 export default function EditRecordDialog({ isOpen, onOpenChange, client, tableName, schema, initialData, primaryKey, onSuccess }: EditRecordDialogProps) {
   const { toast } = useToast();

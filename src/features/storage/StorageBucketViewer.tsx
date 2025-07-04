@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useMemo } from "react";
-import type { Bucket } from "./storage-list";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "./ui/table";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
+import type { Bucket } from "./StorageList";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Eye, ArrowUpDown, Loader2, Trash2 } from "lucide-react";
-import { Checkbox } from "./ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from '@supabase/supabase-js';
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface StorageBucketViewerProps {
   bucket: Bucket;
@@ -350,4 +350,4 @@ const StorageBucketViewer: React.FC<StorageBucketViewerProps> = ({ bucket, proje
   );
 };
 
-export default StorageBucketViewer;
+export default StorageBucketViewer; 
