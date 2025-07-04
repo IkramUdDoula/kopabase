@@ -136,8 +136,8 @@ If you want to provide config programmatically (e.g., for deployment or custom e
     "projectUrl": "your-supabase-project-url",
     "anonKey": "your-supabase-project-anon-key",
     "serviceRoleKey": "your-supabse-project-service-role-key",
-    "projectName": "haalkhata admin"
-  }
+    "projectName": "admin"
+}
 }
 ```
 
