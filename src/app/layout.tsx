@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: 'Kopabase',
-  description: 'A simple dashboard for managing a Supabase database.',
+  description: 'A bare minimum Supabase client for everyday admin work.',
 };
 
 export default function RootLayout({
