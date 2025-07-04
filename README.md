@@ -23,15 +23,7 @@ cd <project-directory>
 npm install
 ```
 
-### 3. Set up environment variables
-Create a `.env.local` file in the root with:
-```
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_PROJECT_REF=your-project-ref
-```
-- You can find these in your Supabase dashboard under Project Settings > API.
-
-### 4. Run the development server
+### 3. Run the development server
 ```bash
 npm run dev
 ```
