@@ -1,49 +1,72 @@
 # Kopabase
 
-A modern admin dashboard for Supabase, built with Next.js, React, and Tailwind CSS.
+A bare minimum Supabase client for everyday admin work.
 
-## Features
-- **Connect to any Supabase project** via form or JSON import
-- **Securely view database tables** and records
-- **Add, edit, and delete records**
-- **All sensitive operations are performed server-side** (service_role key never exposed to frontend)
-- **Beautiful, responsive UI** with custom component library
+## 🚀 Key Features
 
-## Getting Started
+- **Supabase Database Table Management**
+  - View all tables in your Supabase project
+  - Sort, search, and select rows
+  - Add, edit, and delete records
+  - Multi-row selection and batch delete
+  - Column sorting and search for all fields
 
-### 1. Clone the repo
-```bash
-git clone <your-repo-url>
-cd <project-directory>
-```
+- **Supabase Storage Management**
+  - View all storage buckets in your project
+  - Browse files in each bucket with a modern table UI
+  - Sort, search, and select files
+  - View file details: filename, size, uploaded date
+  - Download/view files (with signed URLs for private buckets)
+  - Delete one or multiple files with confirmation
+  - Sort files by name, date, or size (client-side for size)
+  - Search by filename, size, or uploaded date
 
-### 2. Install dependencies
-```bash
-npm install
-```
+- **Modern, Consistent UI/UX**
+  - Responsive sidebar with collapsible Database and Storage sections
+  - Sectioned layout: logo/header, database, storage, settings, disconnect
+  - Table and storage file views use a unified card-based design
+  - Inline search, sorting, and selection for all tables
+  - Reload button for refreshing table or bucket data
+  - Toast notifications for actions (save, delete, etc.)
 
-### 3. Run the development server
-```bash
-npm run dev
-```
+- **Settings**
+  - Configure max visibility duration for private file signed URLs
+  - Settings are persisted locally and applied to all private file views
 
-## Usage
-- On first load, connect to your Supabase project using the form or by importing a JSON config.
-- Browse and manage your tables and records.
-- View live metrics (database size) and more coming soon.
+- **Extensible & Minimal**
+  - Built with Next.js, React, and Supabase JS client
+  - Modular component structure for easy extension
+  - Minimal dependencies and easy to maintain
 
-## Project Structure
-- `src/app/` - Next.js app directory (routing, pages, API routes)
-- `src/components/` - UI and dashboard components
-- `src/components/metrics/` - Metric cards (database size, etc.)
-- `src/app/api/metrics/` - Secure API routes for metrics (server-side only)
-- `src/lib/` - Supabase client and utilities
+## 🛠️ Getting Started
 
-## Security
-- The `service_role` key is **never sent to the client**. All sensitive API calls are made via server-side API routes.
+1. Clone the repo and install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+2. Configure your Supabase project URL and keys in the app.
+3. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-## Customization
-- To add a new metric, create an API route in `src/app/api/metrics/` and a card in `src/components/metrics/`. 
+## 📁 Project Structure
 
-## License
-MIT
+- `src/components/` — UI components (tables, storage, dialogs, sidebar, etc.)
+- `src/app/` — App entry and layout
+- `src/lib/` — Supabase client and utilities
+- `public/` — Static assets and icons
+
+## 💡 Why Kopabase?
+
+- No vendor lock-in: works with any Supabase project
+- Fast, clean, and focused on real admin workflows
+- Open source and easy to extend
+
+---
+
+**Enjoy managing your Supabase project with Kopabase!**

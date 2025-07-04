@@ -153,7 +153,7 @@ export default function TableViewer({
               <TableBody>
                 {filteredData.length > 0 ? (
                   filteredData.map((row) => (
-                    <TableRow key={row[primaryKey]}>
+                    <TableRow key={row[primaryKey]} data-state={selectedRows.has(row[primaryKey]) ? "selected" : undefined}>
                       <TableCell>
                         <Checkbox
                           checked={selectedRows.has(row[primaryKey])}

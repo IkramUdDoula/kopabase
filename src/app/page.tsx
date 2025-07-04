@@ -13,6 +13,8 @@ export default function Home() {
   const [schema, setSchema] = useState<any | null>(null);
   const [projectUrl, setProjectUrl] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
+  const [anonKey, setAnonKey] = useState<string>("");
+  const [serviceRoleKey, setServiceRoleKey] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -24,6 +26,8 @@ export default function Home() {
         const { projectUrl, anonKey, serviceRoleKey, projectName } = JSON.parse(saved);
         if (projectUrl && anonKey) {
           setProjectName(projectName || null);
+          setAnonKey(anonKey);
+          setServiceRoleKey(serviceRoleKey);
           handleConnect(projectUrl, anonKey, serviceRoleKey, projectName);
         }
       } catch {}
@@ -49,6 +53,8 @@ export default function Home() {
       setSchema(schemaResponse);
       setProjectUrl(url);
       setProjectName(projectName || null);
+      setAnonKey(key);
+      setServiceRoleKey(serviceRoleKey);
       toast({
         title: "Success",
         description: "Connected to Supabase project.",
@@ -64,6 +70,8 @@ export default function Home() {
       setSchema(null);
       setProjectUrl(null);
       setProjectName(null);
+      setAnonKey("");
+      setServiceRoleKey(undefined);
       // Remove invalid connection info
       localStorage.removeItem("supabaseConnection");
     } finally {
@@ -76,6 +84,8 @@ export default function Home() {
     setSchema(null);
     setProjectUrl(null);
     setProjectName(null);
+    setAnonKey("");
+    setServiceRoleKey(undefined);
     localStorage.removeItem("supabaseConnection");
   }
 
@@ -97,7 +107,15 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       {client && schema && projectUrl ? (
-        <DashboardLayout client={client} schema={schema} onDisconnect={handleDisconnect} projectUrl={projectUrl} projectName={projectName} />
+        <DashboardLayout 
+          client={client} 
+          schema={schema} 
+          onDisconnect={handleDisconnect} 
+          projectUrl={projectUrl} 
+          projectName={projectName}
+          anonKey={anonKey}
+          serviceRoleKey={serviceRoleKey}
+        />
       ) : (
         <SupabaseConnectForm onConnect={handleConnect} />
       )}
