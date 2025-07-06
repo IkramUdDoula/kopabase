@@ -6,7 +6,7 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger
 import TableList from "@/features/database/TableList";
 import TableViewer from "@/features/database/TableViewer";
 import { Button } from "./ui/button"; 
-import { Database, Plus, RefreshCw, Table, Archive, Star } from "lucide-react";
+import { Database, Plus, RefreshCw, Table, Archive, Star, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AddRecordDialog from "@/features/database/add-record-dialog";
 import EditRecordDialog from "@/features/database/edit-record-dialog";
@@ -24,6 +24,11 @@ import { Input } from "./ui/input";
 import { useLoading } from "@/hooks/use-loading";
 import { useDialog } from "@/hooks/use-dialog";
 import type { Bucket } from "@/features/storage/StorageList";
+import AuthList from "@/features/auth/AuthList";
+import AuthViewer from "@/features/auth/AuthViewer";
+import AddUserDialog from "@/features/auth/AddUserDialog";
+import EditUserDialog from "@/features/auth/EditUserDialog";
+import { createClient } from '@supabase/supabase-js';
 
 type DashboardLayoutProps = {
   client: SupabaseClient;
@@ -250,6 +255,140 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
     }
   };
 
+  // Add state for Auth feature
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [authPins, setAuthPins] = useState<string[]>([]);
+  const [isAddUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [isEditUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authOpen, setAuthOpen] = useState(true);
+  const [isUsersPinned, setIsUsersPinned] = useState(false);
+  const handlePinUsers = () => setIsUsersPinned(p => !p);
+
+  // Replace stub user fetching with Supabase Auth API
+  useEffect(() => {
+    if (!projectUrl || !serviceRoleKey) return;
+    setIsAuthLoading(true);
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    supabase.auth.admin.listUsers()
+      .then(({ data, error }) => {
+        if (error) {
+          toast({ variant: 'destructive', title: 'Error', description: error.message });
+          setUsers([]);
+        } else {
+          setUsers(data.users || []);
+        }
+        setIsAuthLoading(false);
+      });
+  }, [projectUrl, serviceRoleKey]);
+
+  // Pin/unpin handlers for Auth
+  const handlePinUser = (userId: string) => {
+    let newPins;
+    if (authPins.includes(userId)) {
+      newPins = authPins.filter(id => id !== userId);
+    } else {
+      newPins = [...authPins, userId];
+    }
+    setAuthPins(newPins);
+    // Optionally persist pins in localStorage
+  };
+
+  // Add, edit, delete user handlers (stubs)
+  const handleAddUser = async ({ email }: { email: string }) => {
+    if (!projectUrl || !serviceRoleKey) return;
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      toast({ title: 'Invitation sent', description: `An invitation email was sent to ${email}.` });
+      // Optionally, add the invited user to the users list with a status
+      setUsers(prev => [{ ...data.user, invited: true }, ...prev]);
+    }
+  };
+  const handleEditUser = async (values: { email: string; role?: string }) => {
+    if (!projectUrl || !serviceRoleKey || !editingUser) return;
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    const { data, error } = await supabase.auth.admin.updateUserById(editingUser.id, {
+      email: values.email,
+      user_metadata: values.role ? { role: values.role } : undefined,
+    });
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      setUsers(prev => prev.map(u => u.id === editingUser.id ? data.user : u));
+      toast({ title: 'User updated', description: 'The user was updated successfully.' });
+    }
+  };
+  const handleDeleteUser = async (user: any) => {
+    if (!projectUrl || !serviceRoleKey) return;
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    const { error } = await supabase.auth.admin.deleteUser(user.id);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      toast({ title: 'User deleted', description: 'The user was deleted successfully.' });
+    }
+  };
+  const handleResetPassword = async (user: any) => {
+    // Supabase does not provide a direct admin reset password, but you can send a password reset email
+    if (!projectUrl || !serviceRoleKey) return;
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    const { error } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: user.email,
+    });
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      toast({ title: 'Password reset email sent', description: 'A password reset email was sent to the user.' });
+    }
+  };
+
+  useEffect(() => {
+    setSelectedUserId(null);
+  }, []);
+
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const handleSelectUserId = (userId: string, selected: boolean) => {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (selected) next.add(userId); else next.delete(userId);
+      return next;
+    });
+  };
+  const handleSelectAllUsers = (selected: boolean) => {
+    setSelectedUserIds(selected ? new Set(users.map(u => u.id)) : new Set());
+  };
+  const handleBulkDeleteUsers = async (usersToDelete: any[]) => {
+    if (!projectUrl || !serviceRoleKey) return;
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    for (const user of usersToDelete) {
+      await supabase.auth.admin.deleteUser(user.id);
+    }
+    setUsers(prev => prev.filter(u => !selectedUserIds.has(u.id)));
+    setSelectedUserIds(new Set());
+    toast({ title: 'Users deleted', description: `${usersToDelete.length} user(s) deleted successfully.` });
+  };
+
+  const handleRefreshUsers = async () => {
+    if (!projectUrl || !serviceRoleKey) return;
+    setIsAuthLoading(true);
+    const supabase = createClient(projectUrl, serviceRoleKey);
+    const { data, error } = await supabase.auth.admin.listUsers();
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      setUsers([]);
+    } else {
+      setUsers(data.users || []);
+    }
+    setIsAuthLoading(false);
+  };
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -286,6 +425,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                           setSelectedTable(table);
                           setSelectedBucket(null);
                           setShowSettings(false);
+                          setSelectedUserId(null);
                         }}
                       >
                         <span className="flex items-center gap-2">
@@ -308,6 +448,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                           setSelectedBucket(bucket);
                           setSelectedTable(null);
                           setShowSettings(false);
+                          setSelectedUserId(null);
                         }}
                       >
                         <span className="flex items-center gap-2">
@@ -328,6 +469,27 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
               <SidebarSeparator className="my-2" />
             </>
           )}
+          {/* Auth Section */}
+          <Collapsible open={authOpen} onOpenChange={setAuthOpen}>
+            <div className="flex items-center justify-between px-4 pt-2 pb-1 cursor-pointer select-none" onClick={() => setAuthOpen(v => !v)}>
+              <div className="text-xs font-semibold text-muted-foreground">Auth</div>
+              {authOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </div>
+            <CollapsibleContent>
+              <AuthList
+                selectedUserId={selectedUserId}
+                onSelectUser={userId => {
+                  setSelectedUserId(userId);
+                  setSelectedTable(null);
+                  setSelectedBucket(null);
+                  setShowSettings(false);
+                }}
+                pinned={isUsersPinned}
+                onPin={handlePinUsers}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+          <SidebarSeparator />
           {/* Database Section */}
           <Collapsible open={dbOpen} onOpenChange={setDbOpen}>
             <div className="flex items-center justify-between px-4 pt-2 pb-1 cursor-pointer select-none" onClick={() => setDbOpen(v => !v)}>
@@ -342,6 +504,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                   setSelectedTable(table);
                   setSelectedBucket(null);
                   setShowSettings(false);
+                  setSelectedUserId(null);
                 }}
                 pinned={tablePins}
                 onPin={handlePinTable}
@@ -364,6 +527,7 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
                   setSelectedBucket(bucket);
                   setSelectedTable(null);
                   setShowSettings(false);
+                  setSelectedUserId(null);
                 }}
                 buckets={unpinnedBuckets}
                 pinned={bucketPins}
@@ -371,7 +535,6 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
               />
             </CollapsibleContent>
           </Collapsible>
-          <div className="flex-1" />
           <SidebarSeparator />
         </SidebarContent>
         <SidebarFooter>
@@ -382,11 +545,15 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
               setShowSettings(true);
               setSelectedTable(null);
               setSelectedBucket(null);
+              setSelectedUserId(null);
             }}
           >
             <SettingsIcon className="w-4 h-4 mr-2" /> Settings
           </Button>
-          <Button variant="ghost" className="w-full justify-start" onClick={onDisconnect}>
+          <Button variant="ghost" className="w-full justify-start" onClick={() => {
+            setSelectedUserId(null);
+            onDisconnect();
+          }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2"><path d="M10 2.5V7.5L12.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M10 17.5V12.5L12.5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M17.5 11.5L12.5 11.5L15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M2.5 11.5L7.5 11.5L5 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M17.5 8.5L12.5 8.5L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M2.5 8.5L7.5 8.5L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
             <span>Disconnect</span>
           </Button>
@@ -395,120 +562,154 @@ export default function DashboardLayout({ client, schema, onDisconnect, projectU
       <SidebarInset>
         <div className="p-4 md:p-6 flex flex-col h-svh">
           {showSettings ? (
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex-1 min-h-0 flex flex-col">
-              <div className="p-4 border-b flex items-center gap-2">
-                <SettingsIcon className="w-6 h-6" />
-                <span className="text-lg font-semibold">Settings</span>
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger />
+                  <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+                </div>
               </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <form
-                  className="space-y-6 max-w-md w-full"
-                  onSubmit={e => {
-                    e.preventDefault();
-                    setMaxVisibility(editedVisibility);
-                    localStorage.setItem('maxVisibilitySeconds', String(editedVisibility));
-                    setIsDirty(false);
-                    toast({ title: 'Settings saved', description: 'Max visibility updated successfully.' });
-                  }}
-                >
-                  <div>
-                    <label htmlFor="max-visibility" className="block text-sm font-medium mb-1">Max visibility of private files (seconds)</label>
-                    <Input
-                      id="max-visibility"
-                      type="number"
-                      min={1}
-                      value={editedVisibility}
-                      onChange={e => {
-                        setEditedVisibility(Number(e.target.value));
-                        setIsDirty(Number(e.target.value) !== maxVisibility);
-                      }}
-                      className="w-full"
-                    />
-                  </div>
-                  <Button type="submit" disabled={!isDirty} className="w-full">Save</Button>
-                </form>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex-1 min-h-0 flex flex-col">
+                <div className="p-4 flex-1 flex flex-col">
+                  <form
+                    className="space-y-6 max-w-md w-full"
+                    onSubmit={e => {
+                      e.preventDefault();
+                      setMaxVisibility(editedVisibility);
+                      localStorage.setItem('maxVisibilitySeconds', String(editedVisibility));
+                      setIsDirty(false);
+                      toast({ title: 'Settings saved', description: 'Max visibility updated successfully.' });
+                    }}
+                  >
+                    <div>
+                      <label htmlFor="max-visibility" className="block text-sm font-medium mb-1">Max visibility of private files (seconds)</label>
+                      <Input
+                        id="max-visibility"
+                        type="number"
+                        min={1}
+                        value={editedVisibility}
+                        onChange={e => {
+                          setEditedVisibility(Number(e.target.value));
+                          setIsDirty(Number(e.target.value) !== maxVisibility);
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                    <Button type="submit" disabled={!isDirty} className="w-full">Save</Button>
+                  </form>
+                </div>
               </div>
-            </div>
-          ) : (
+            </>
+          ) : selectedTable && tableSchema && !selectedBucket ? (
             <>
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
                   <SidebarTrigger />
                   <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    {selectedBucket ? (
-                      <>
-                        {selectedBucket.name}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Reload bucket files"
-                          onClick={() => setBucketReloadKey(k => k + 1)}
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                        </Button>
-                      </>
-                    ) : selectedTable ? (
-                      <>
-                        {selectedTable}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Reload table data"
-                          onClick={fetchData}
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                        </Button>
-                      </>
-                    ) : (
-                      "Dashboard"
-                    )}
+                    {selectedTable}
                   </h1>
                 </div>
-                {selectedTable && !selectedBucket && (
-                  <div className="flex items-center gap-2">
-                    <Button onClick={() => openAddDialog()}>
-                      <Plus className="mr-2 h-4 w-4" /> Add Record
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {selectedTable && tableSchema && !selectedBucket ? (
-                <TableViewer
-                  key={selectedTable}
-                  data={data}
-                  isLoading={isLoading}
-                  columns={columns}
-                  primaryKey={primaryKey}
-                  selectedRows={selectedRows}
-                  sortConfig={sortConfig}
-                  onSort={setSortConfig}
-                  onSelectRow={handleSelectRow}
-                  onSelectAll={handleSelectAll}
-                  onEditClick={handleEditClick}
-                  selectedRowCount={selectedRows.size}
-                  onDeleteClick={() => openDeleteDialog()}
-                />
-              ) : selectedBucket ? (
-                <StorageBucketViewer
-                  key={selectedBucket.id + '-' + bucketReloadKey}
-                  bucket={selectedBucket}
-                  projectUrl={projectUrl}
-                  anonKey={anonKey}
-                  serviceRoleKey={serviceRoleKey}
-                  maxVisibilitySeconds={maxVisibility}
-                />
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-3xl font-bold mb-2">Welcome to Kopabase!</h2>
-                    <p className="text-muted-foreground text-lg">Select a table or storage bucket from the sidebar to get started.</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => openAddDialog()}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Record
+                  </Button>
                 </div>
-              )}
+              </div>
+              <TableViewer
+                key={selectedTable}
+                data={data}
+                isLoading={isLoading}
+                columns={columns}
+                primaryKey={primaryKey}
+                selectedRows={selectedRows}
+                sortConfig={sortConfig}
+                onSort={setSortConfig}
+                onSelectRow={handleSelectRow}
+                onSelectAll={handleSelectAll}
+                onEditClick={handleEditClick}
+                selectedRowCount={selectedRows.size}
+                onDeleteClick={() => openDeleteDialog()}
+              />
             </>
+          ) : selectedBucket ? (
+            <>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger />
+                  <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    {selectedBucket.name}
+                  </h1>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Reload bucket files"
+                    onClick={() => setBucketReloadKey(k => k + 1)}
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+              <StorageBucketViewer
+                key={selectedBucket.id + '-' + bucketReloadKey}
+                bucket={selectedBucket}
+                projectUrl={projectUrl}
+                anonKey={anonKey}
+                serviceRoleKey={serviceRoleKey}
+                maxVisibilitySeconds={maxVisibility}
+              />
+            </>
+          ) : selectedUserId === 'users' && !selectedTable && !selectedBucket ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger />
+                  <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+                  <Button variant="ghost" size="icon" title="Refresh users" onClick={handleRefreshUsers}>
+                    <RefreshCw className="w-5 h-5" />
+                  </Button>
+                </div>
+                <Button onClick={() => setAddUserDialogOpen(true)} className="ml-auto">
+                  <Plus className="mr-2 h-4 w-4" /> Add User
+                </Button>
+              </div>
+              <AuthViewer
+                users={users}
+                isLoading={isAuthLoading}
+                onAddUser={() => setAddUserDialogOpen(true)}
+                onEditUser={user => {
+                  setEditingUser(user);
+                  setEditUserDialogOpen(true);
+                }}
+                onDeleteUser={handleDeleteUser}
+                onResetPassword={handleResetPassword}
+                selectedUserIds={selectedUserIds}
+                onSelectUserId={handleSelectUserId}
+                onSelectAll={handleSelectAllUsers}
+                onBulkDelete={handleBulkDeleteUsers}
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold mb-2">Welcome to Kopabase!</h2>
+                <p className="text-muted-foreground text-lg">Select a table or storage bucket from the sidebar to get started.</p>
+              </div>
+            </div>
           )}
+          <AddUserDialog
+            isOpen={isAddUserDialogOpen}
+            onOpenChange={setAddUserDialogOpen}
+            onSubmit={handleAddUser}
+          />
+          <EditUserDialog
+            isOpen={isEditUserDialogOpen}
+            onOpenChange={setEditUserDialogOpen}
+            initialData={editingUser}
+            onSubmit={handleEditUser}
+          />
         </div>
         {selectedTable && tableSchema && !selectedBucket && (
           <>

@@ -1,6 +1,51 @@
 # Kopabase
 
-A bare minimum Supabase client for everyday admin work.
+Kopabase is a Next.js + Supabase admin dashboard for managing your database, storage, and authentication users with a modern, modular UI.
+
+## Features
+
+- **Modular Feature Structure:**
+  - Database, Storage, and Auth features are organized in their own modules for easy extension and maintenance.
+- **Auth Management:**
+  - Auth section is now at the top of the sidebar, above Database and Storage.
+  - Add users by email invitation only (no password/role fields). An invitation email is sent via Supabase Auth admin API.
+  - Invited users are shown with an "Invited" status until they complete registration.
+  - Ban/delete logic is replaced with invitation-only onboarding for security and auditability.
+- **Database Management:**
+  - View, add, edit, and delete records in your Supabase tables.
+  - Bulk selection and deletion supported.
+- **Storage Management:**
+  - View and manage storage buckets and files.
+- **Consistent UI/UX:**
+  - Sidebar and header layouts are consistent across all sections (Auth, Database, Storage, Settings).
+  - Sidebar collapsing icon is used in all section headers for a unified look.
+
+## Auth Feature Usage
+
+- **Viewing Users:**
+  - Click the "Users" section at the top of the sidebar to view all registered and invited users.
+  - Invited users are visually indicated in the table.
+- **Adding Users:**
+  - Click "Add User" in the Users section header.
+  - Enter the user's email address and submit. The user will receive an invitation email to complete registration.
+- **User Status:**
+  - Users who have not completed registration are marked as "Invited".
+  - Only email-based invitations are supported for adding users.
+
+## Settings
+
+- The settings page header now uses the sidebar collapsing icon for consistency.
+- The "Settings" label and icon are displayed above the main settings content, matching other section headers.
+
+## Development
+
+- Modular codebase: features are in `src/features/`.
+- UI components are in `src/components/`.
+- Configuration in `src/config/`.
+
+---
+
+For more details, see the feature-specific README files in `src/features/`.
 
 ## 🚀 Key Features
 
