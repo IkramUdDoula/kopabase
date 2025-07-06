@@ -3,13 +3,13 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { SupabaseClient } from "@/lib/supabase-client";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger, SidebarInset, SidebarFooter, SidebarSeparator } from "@/components/ui/sidebar";
-import TableList from "./table-list";
-import TableViewer from "./table-viewer";
+import TableList from "@/features/database/TableList";
+import TableViewer from "@/features/database/TableViewer";
 import { Button } from "./ui/button"; 
 import { Database, Plus, RefreshCw, Table, Archive, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import AddRecordDialog from "./add-record-dialog";
-import EditRecordDialog from "./edit-record-dialog";
+import AddRecordDialog from "@/features/database/add-record-dialog";
+import EditRecordDialog from "@/features/database/edit-record-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ChartContainer } from "./ui/chart";
