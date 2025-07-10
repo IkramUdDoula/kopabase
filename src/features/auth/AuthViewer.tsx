@@ -101,7 +101,7 @@ export default function AuthViewer({ users, isLoading, onAddUser, onEditUser, on
                       <TableCell>{user.phone || '-'}</TableCell>
                       <TableCell>
                         {user.identities && user.identities.length > 0 ? (
-                          user.identities.map((id, idx) => (
+                          user.identities.map((id: { provider: string; provider_type?: string }, idx: number) => (
                             <span key={id.provider} className="inline-flex items-center gap-1 mr-2">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#888" strokeWidth="2" /><path d="M8 12h8" stroke="#888" strokeWidth="2" strokeLinecap="round" /></svg>
                               {id.provider.charAt(0).toUpperCase() + id.provider.slice(1)}
