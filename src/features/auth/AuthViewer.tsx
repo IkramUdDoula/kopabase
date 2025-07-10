@@ -63,12 +63,15 @@ export default function AuthViewer({ users, isLoading, onAddUser, onEditUser, on
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.has(u.id))}
+                      checked={
+                        allSelected
+                          ? true
+                          : someSelected
+                            ? "indeterminate"
+                            : false
+                      }
                       onCheckedChange={checked => onSelectAll(!!checked)}
                       disabled={filteredUsers.length === 0}
-                      ref={el => {
-                        if (el) el.indeterminate = filteredUsers.some(u => selectedUserIds.has(u.id)) && !filteredUsers.every(u => selectedUserIds.has(u.id));
-                      }}
                     />
                   </TableHead>
                   <TableHead>UID</TableHead>
